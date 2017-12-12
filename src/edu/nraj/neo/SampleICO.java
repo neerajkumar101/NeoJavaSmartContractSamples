@@ -25,11 +25,19 @@ public class SampleICO extends SmartContract {
     private static final int ico_start_time = 1506787200;
     private static final int ico_end_time = 1538323200;
 
-    [DisplayName("transfer")]
+    /*[DisplayName("transfer")]
     public static event Action<byte[], byte[], BigInteger> Transferred;
 
     [DisplayName("refund")]
-    public static event Action<byte[], BigInteger> Refund;
+    public static event Action<byte[], BigInteger> Refund;*/
+    
+    public static void Transferred(byte arr1[], byte arr2[], BigInteger bigIntNum) {
+    	System.out.println("array: " + arr1 + " & array 2: " + arr2 + " & number is: " + bigIntNum.toString());
+    }
+
+    public static void Refund(byte arr[], BigInteger bigIntNum) {
+    	System.out.println("array: " + arr + " & " + bigIntNum.toString());
+    }
 
     public static Object main(String operation, Object[] args)
     {
@@ -75,10 +83,10 @@ public class SampleICO extends SmartContract {
         }
         //you can choice refund or not refund
         byte[] sender = getSender();
-        long contribute_value = getContributeValue();
+        Long contribute_value = getContributeValue();
         if (contribute_value > 0 && sender.length != 0)
         {
-            Refund(sender, contribute_value);
+            Refund(sender, new BigInteger(contribute_value.toString()));
         }
         return false;
     }
@@ -93,8 +101,10 @@ public class SampleICO extends SmartContract {
         final byte pre_ico_cap_bytes[] = { pre_ico_cap.byteValue() };
         Storage.put(Storage.currentContext(), Owner, pre_ico_cap_bytes);
         
-        Storage.put(Storage.currentContext(), "totalSupply", pre_ico_cap_bytes);
-        Transferred(null, Owner, pre_ico_cap);
+        Storage.put(Storage.currentContext(), "totalSupply" , pre_ico_cap_bytes);
+        
+        Transferred(null, Owner, new BigInteger(pre_ico_cap.toString()));
+        
         return true;
     }
 
@@ -110,13 +120,13 @@ public class SampleICO extends SmartContract {
         {
             return false;
         }
-        long contribute_value = getContributeValue();
+        Long contribute_value = getContributeValue();
         // the current exchange rate between ico tokens and neo during the token swap period
-        long swap_rate = currentSwapRate();
+        Long swap_rate = currentSwapRate();
         // crowdfunding failure
-        if (swap_rate == 0)
+        if(swap_rate == 0)
         {
-            Refund(sender, contribute_value);
+            Refund(sender, new BigInteger(contribute_value.toString()));
             return false;
         }
         // you can get current swap token amount
@@ -132,7 +142,7 @@ public class SampleICO extends SmartContract {
         Storage.put(Storage.currentContext(), sender,  bigIntToken.add(balance));
         BigInteger totalSupply = new BigInteger(Storage.get(Storage.currentContext(), "totalSupply"));
         Storage.put(Storage.currentContext(), "totalSupply", bigIntToken.add(totalSupply));
-        Transferred(null, sender, token);
+        Transferred(null, sender, bigIntToken);
         return true;
     }
 
@@ -143,15 +153,18 @@ public class SampleICO extends SmartContract {
 
     // function that is always called when someone wants to transfer tokens.
     public static boolean transfer(byte[] from, byte[] to, BigInteger value) {
-        if (value <= 0) return false;
+    	 if (value.compareTo(new BigInteger("0")) == -1 || value.compareTo(new BigInteger("0")) == 0) return false;
         if (!Runtime.checkWitness(from)) return false;
         if (from == to) return true;
         BigInteger from_value = new BigInteger(Storage.get(Storage.currentContext(), from));
-        if (from_value < value) return false;
+        
+        //checking for form_value to be less then value
+        if (from_value.compareTo(value) == -1) return false; 
+        
         if (from_value == value)
             Storage.delete(Storage.currentContext(), from);
         else
-            Storage.put(Storage.currentContext(), from, from_value.subtract(value));
+        	Storage.put(Storage.currentContext(), from, from_value.subtract(value));
         BigInteger to_value = new BigInteger(Storage.get(Storage.currentContext(), to));
         Storage.put(Storage.currentContext(), to, to_value.add(value));
         Transferred(from, to, value);
@@ -160,7 +173,7 @@ public class SampleICO extends SmartContract {
 
     // get the account balance of another account with address
     public static BigInteger balanceOf(byte[] address) {
-        return new BigInteger(Storage.get(Storage.currentContext(), address))
+        return new BigInteger(Storage.get(Storage.currentContext(), address));
     }
 
     // The function CurrentSwapRate() returns the current exchange rate
@@ -193,12 +206,12 @@ public class SampleICO extends SmartContract {
         
         BigInteger balance_token = bigIntTotalAmount.subtract(total_supply);
         
-        if (balance_token <= 0)
+        if (balance_token.compareTo(new BigInteger("0")) == -1 || balance_token.compareTo(new BigInteger("0")) == 0)
         {
-            Refund(sender, value);
+            Refund(sender, new BigInteger(value.toString()));
             return 0;
         }
-        else if (balance_token < bigIntToken)
+        else if (balance_token.compareTo(bigIntToken) == -1)
         {
             Refund(sender, (bigIntToken.subtract(balance_token)).divide(swapRateTimesNeoDecimals));
             
